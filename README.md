@@ -18,7 +18,7 @@ services:
 ```
 
 
-By default, SJAG routes requests to a service whose hostname is the first URL component of the request/
+By default, SJAG routes requests to a service whose hostname is the first URL component of the request.
 For example, a request to `http://localhost:8000/myservice/endpoint/1` gets routed to `http://myservice:8000/endpoint/1`.
 
 #### Arguments
