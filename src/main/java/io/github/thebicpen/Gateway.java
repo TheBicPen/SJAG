@@ -9,7 +9,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -23,10 +22,6 @@ public class Gateway implements HttpHandler {
 
   public Gateway(Map<String, Endpoint> services, int defaultPort) {
     this.services = services;
-  }
-
-  public Gateway(int defaultPort) {
-    this.services = new HashMap<>();
   }
 
   @Override
@@ -52,7 +47,7 @@ public class Gateway implements HttpHandler {
                   null,
                   endpoint.hostname(),
                   endpoint.port(),
-                  requestPath.substring(requestPath.indexOf("/")+1),
+                  requestPath.substring(requestPath.indexOf("/") + 1),
                   requestURI.getQuery(),
                   requestURI.getFragment()))
           .method(r.getRequestMethod(), BodyPublishers.ofInputStream(() -> r.getRequestBody()))
@@ -75,22 +70,7 @@ public class Gateway implements HttpHandler {
               });
     } catch (URISyntaxException e) {
       e.printStackTrace();
-      this.sendError(r, 400);
-    } catch (Exception e) {
-      e.printStackTrace();
-      this.sendError(r, 500);
-    }
-  }
-
-  private void sendError(HttpExchange r, int code) {
-    try {
-      r.sendResponseHeaders(code, 0);
-
-    } catch (IOException e) {
-      System.err.println("Unable to send error response");
-      e.printStackTrace();
-    } finally {
-      r.close();
+      this.sendError(r, 400, "Unable to build URI to forward request to.");
     }
   }
 
