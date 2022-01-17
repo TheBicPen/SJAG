@@ -12,14 +12,13 @@ public class App {
   static int OUT_PORT = 8000;
 
   public static void main(String[] args) throws IOException {
-    HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", IN_PORT), 0);
     Map<String, Endpoint> services = new HashMap<>();
     if (args.length >= 2) {
       try {
         IN_PORT = Integer.parseInt(args[0]);
         OUT_PORT = Integer.parseInt(args[1]);
       } catch (NumberFormatException e) {
-        System.err.printf("Unable to parse port numbers: %d, %d\n", args[0], args[1]);
+        System.err.printf("Unable to parse port numbers: %s, %s\n", args[0], args[1]);
         System.exit(1);
       }
       for (String arg : Arrays.copyOfRange(args, 2, args.length)) {
@@ -36,6 +35,7 @@ public class App {
         }
       }
     }
+    HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", IN_PORT), 0);
     server.createContext("/", new Gateway(services, OUT_PORT));
     server.start();
     System.out.printf("Routing requests to port %d\n", OUT_PORT);

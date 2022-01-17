@@ -22,6 +22,7 @@ public class Gateway implements HttpHandler {
 
   public Gateway(Map<String, Endpoint> services, int defaultPort) {
     this.services = services;
+    this.defaultPort = defaultPort;
   }
 
   @Override
@@ -47,7 +48,7 @@ public class Gateway implements HttpHandler {
                   null,
                   endpoint.hostname(),
                   endpoint.port(),
-                  requestPath.substring(requestPath.indexOf("/") + 1),
+                  requestPath.substring(requestPath.indexOf('/', 1)),
                   requestURI.getQuery(),
                   requestURI.getFragment()))
           .method(r.getRequestMethod(), BodyPublishers.ofInputStream(() -> r.getRequestBody()))
@@ -69,8 +70,14 @@ public class Gateway implements HttpHandler {
                 }
               });
     } catch (URISyntaxException e) {
+      String error = "Invalid URI: " + e.getMessage();
+      System.err.println(error);
+      this.sendError(r, 400, error);
+    } catch (Exception e) {
       e.printStackTrace();
-      this.sendError(r, 400, "Unable to build URI to forward request to.");
+      String error = "Gateway internal error: " + e.getMessage();
+      System.err.println(error);
+      this.sendError(r, 500, error);
     }
   }
 
