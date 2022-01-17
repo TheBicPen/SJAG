@@ -48,7 +48,8 @@ public class Gateway implements HttpHandler {
                   null,
                   endpoint.hostname(),
                   endpoint.port(),
-                  requestPath.substring(requestPath.indexOf('/', 1)),
+                  requestPath.substring(
+                      requestPath.indexOf('/', 1) == -1 ? requestPath.length() : requestPath.indexOf('/', 1)),
                   requestURI.getQuery(),
                   requestURI.getFragment()))
           .method(r.getRequestMethod(), BodyPublishers.ofInputStream(() -> r.getRequestBody()))
