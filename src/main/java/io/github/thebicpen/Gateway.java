@@ -32,12 +32,12 @@ public class Gateway implements HttpHandler {
     String requestPath = requestURI.getPath();
     String[] uriParts = requestPath.split("/");
     if (uriParts.length < 2) {
-      this.sendError(r, 400, "No endpoint specified.");
+      this.sendResponse(r, 400, "Error: No endpoint specified.");
       return;
     }
     Endpoint endpoint = services.getOrDefault(uriParts[1], new Endpoint(defaultPort, uriParts[1]));
     if (endpoint.hostname().equals(null)) {
-      this.sendError(r, 400, "Invalid endpoint.");
+      this.sendResponse(r, 400, "Error: Invalid endpoint.");
       return;
     }
     try {
@@ -57,37 +57,34 @@ public class Gateway implements HttpHandler {
       CompletableFuture<HttpResponse<String>> response = client.sendAsync(request, BodyHandlers.ofString());
 
       response
-          .thenApply(HttpResponse::statusCode)
+          .exceptionallyAsync(ex -> {
+            sendResponse(r, 400, "Error: " + ex.getMessage());
+            return null;
+          })
+          .thenApplyAsync(HttpResponse::statusCode)
           .thenAcceptBothAsync(
               response.thenApply(HttpResponse::body),
               (code, body) -> {
-                try {
-                  r.sendResponseHeaders(code, 0);
-                  OutputStream os = r.getResponseBody();
-                  os.write(body.getBytes());
-                  os.close();
-                } catch (IOException e) {
-                  r.close();
-                }
+                sendResponse(r, code, body);
               });
     } catch (URISyntaxException e) {
-      String error = "Invalid URI: " + e.getMessage();
+      String error = "Error: Invalid URI: " + e.getMessage();
       System.err.println(error);
-      this.sendError(r, 400, error);
+      this.sendResponse(r, 400, error);
     } catch (Exception e) {
       e.printStackTrace();
       String error = "Gateway internal error: " + e.getMessage();
       System.err.println(error);
-      this.sendError(r, 500, error);
+      this.sendResponse(r, 500, error);
     }
   }
 
-  private void sendError(HttpExchange r, int code, String error) {
+  private void sendResponse(HttpExchange r, int code, String response) {
     try {
       r.sendResponseHeaders(code, 0);
-      r.getResponseBody().write(("Error: " + error).getBytes());
+      r.getResponseBody().write(response.getBytes());
     } catch (IOException e) {
-      System.err.println("Unable to send error response");
+      System.err.println("Unable to send response.");
       e.printStackTrace();
     } finally {
       r.close();

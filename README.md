@@ -1,5 +1,5 @@
 # SJAG
-Simple Java Application Gateway
+Simple Java Application Gateway. Designed specifically for use with Docker.
 
 
 ## Usage
@@ -17,6 +17,7 @@ services:
       - 8000:8000
 ```
 
+See `tests` directory for usage examples.
 
 By default, SJAG routes requests to a service whose hostname is the first URL component of the request.
 For example, a request to `http://localhost:8000/myservice/endpoint/1` gets routed to `http://myservice:8000/endpoint/1`.
