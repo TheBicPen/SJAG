@@ -17,16 +17,12 @@ import com.sun.net.httpserver.HttpHandler;
 
 public class Gateway implements HttpHandler {
   static HttpClient client = HttpClient.newBuilder().build();
-  private Map<String, String> services;
-  private boolean autoRoute = false;
+  private Map<String, Endpoint> services;
+  private int defaultPort;
 
-  public Gateway(Map<String, String> services) {
+  public Gateway(Map<String, Endpoint> services, int defaultPort) {
     this.services = services;
-    this.autoRoute = false;
-  }
-
-  public Gateway() {
-    this.autoRoute = true;
+    this.defaultPort = defaultPort;
   }
 
   @Override
@@ -36,12 +32,12 @@ public class Gateway implements HttpHandler {
     String requestPath = requestURI.getPath();
     String[] uriParts = requestPath.split("/");
     if (uriParts.length < 2) {
-      this.sendError(r, 400, "no endpoint specified");
+      this.sendResponse(r, 400, "Error: No endpoint specified.");
       return;
     }
-    String host = this.autoRoute ? uriParts[1] : services.getOrDefault(null, uriParts[1]);
-    if (host.equals(null)) {
-      this.sendError(r, 400, "invalid endpoint");
+    Endpoint endpoint = services.getOrDefault(uriParts[1], new Endpoint(defaultPort, uriParts[1]));
+    if (endpoint.hostname().equals(null)) {
+      this.sendResponse(r, 400, "Error: Invalid endpoint.");
       return;
     }
     try {
@@ -50,57 +46,45 @@ public class Gateway implements HttpHandler {
               new URI(
                   "http",
                   null,
-                  host,
-                  8000,
-                  requestURI.getRawPath(),
-                  requestURI.getRawQuery(),
-                  requestURI.getRawFragment()))
+                  endpoint.hostname(),
+                  endpoint.port(),
+                  requestPath.substring(
+                      requestPath.indexOf('/', 1) == -1 ? requestPath.length() : requestPath.indexOf('/', 1)),
+                  requestURI.getQuery(),
+                  requestURI.getFragment()))
           .method(r.getRequestMethod(), BodyPublishers.ofInputStream(() -> r.getRequestBody()))
-          .header("Request-Timeout", "5") // 5 second timeout
           .build();
       CompletableFuture<HttpResponse<String>> response = client.sendAsync(request, BodyHandlers.ofString());
 
       response
-          .thenApply(HttpResponse::statusCode)
+          .exceptionallyAsync(ex -> {
+            sendResponse(r, 400, "Error: " + ex.getMessage());
+            return null;
+          })
+          .thenApplyAsync(HttpResponse::statusCode)
           .thenAcceptBothAsync(
               response.thenApply(HttpResponse::body),
               (code, body) -> {
-                try {
-                  r.sendResponseHeaders(code, 0);
-                  OutputStream os = r.getResponseBody();
-                  os.write(body.getBytes());
-                  os.close();
-                } catch (IOException e) {
-                  r.close();
-                }
+                sendResponse(r, code, body);
               });
     } catch (URISyntaxException e) {
-      e.printStackTrace();
-      this.sendError(r, 400);
+      String error = "Error: Invalid URI: " + e.getMessage();
+      System.err.println(error);
+      this.sendResponse(r, 400, error);
     } catch (Exception e) {
       e.printStackTrace();
-      this.sendError(r, 500);
+      String error = "Gateway internal error: " + e.getMessage();
+      System.err.println(error);
+      this.sendResponse(r, 500, error);
     }
   }
 
-  private void sendError(HttpExchange r, int code) {
+  private void sendResponse(HttpExchange r, int code, String response) {
     try {
       r.sendResponseHeaders(code, 0);
-
+      r.getResponseBody().write(response.getBytes());
     } catch (IOException e) {
-      System.err.println("Unable to send error response");
-      e.printStackTrace();
-    } finally {
-      r.close();
-    }
-  }
-
-  private void sendError(HttpExchange r, int code, String error) {
-    try {
-      r.sendResponseHeaders(code, 0);
-      r.getResponseBody().write(error.getBytes());
-    } catch (IOException e) {
-      System.err.println("Unable to send error response");
+      System.err.println("Unable to send response.");
       e.printStackTrace();
     } finally {
       r.close();

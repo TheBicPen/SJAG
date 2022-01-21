@@ -1,0 +1,55 @@
+version: "3.9"
+services:
+  server9000:
+    container_name: server9000
+    build: 
+      context: ./server
+      args:
+        PORT: 9000
+  server8000:
+    container_name: server8000
+    build: 
+      context: ./server
+      args:
+        PORT: 8000
+  runner:
+    build: ./runner
+    depends_on:
+    - server9000
+    - server8000
+    - gateway-no-args
+    - gateway-default-ports
+    - gateway7000
+    - gateway-route-9000
+    - gateway-route-override
+
+  gateway-no-args:
+    build: ../
+    ports: 
+      - 8000
+    container_name: gateway-no-args
+  gateway-default-ports:
+    build: ../
+    ports: 
+      - 8000
+    container_name: gateway-default-ports
+    command: ["8000", "8000"]
+  gateway7000:
+    build: ../
+    ports: 
+      - 7000
+    container_name: gateway7000
+    command: ["7000", "8000"]
+  gateway-route-9000:
+    build: ../
+    ports: 
+      - 8000
+    container_name: gateway-route-9000
+    command: ["8000", "9000"]
+  gateway-route-override:
+    build: ../
+    ports: 
+      - 8000
+    container_name: gateway-route-override
+    command: ["8000", "9000", "server8000,server8000,8000"]
+    
