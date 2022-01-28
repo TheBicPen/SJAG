@@ -1,6 +1,8 @@
 # SJAG
 Simple Java Application Gateway. Designed specifically for use with Docker.
 
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/TheBicPen/SJAG/Docker%20Integration%20Tests)
+![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/thebicpen/sjag?sort=semver)
 
 ## Usage
 Run `docker run sjag` to execute the container on its own.
